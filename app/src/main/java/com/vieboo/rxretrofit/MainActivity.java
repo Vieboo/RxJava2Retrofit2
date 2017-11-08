@@ -7,6 +7,11 @@ import android.util.Log;
 import android.view.View;
 import android.widget.Toast;
 
+import com.vieboo.rxretrofit.http.BaseObserver;
+import com.vieboo.rxretrofit.http.RetrofitFactory;
+import com.vieboo.rxretrofit.http.RxScheduler;
+import com.vieboo.rxretrofit.model.BaseModel;
+import com.vieboo.rxretrofit.model.Translation;
 import com.vieboo.rxretrofit.model.Upload2;
 import com.vieboo.rxretrofit.model.Zhuangbi;
 import com.vieboo.rxretrofit.net.Api;
@@ -34,6 +39,9 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+
+        getTranslation();
 
         OkHttpClient client = new OkHttpClient.Builder()
                 .connectTimeout(20, TimeUnit.SECONDS)
@@ -158,6 +166,26 @@ public class MainActivity extends AppCompatActivity {
     protected void onDestroy() {
         super.onDestroy();
         Log.e(TAG, "-----------onDestroy: " );
+    }
+
+    private void getTranslation() {
+        RetrofitFactory.getTSInstance().getTranslation("fy", "en", "zh", "good")
+                .compose(RxScheduler.<BaseModel<Translation>>compose())
+                .subscribe(new BaseObserver<Translation>(MainActivity.this) {
+                    @Override
+                    protected void onSuccess(Translation translation) {
+                        String str = "";
+                        for(String s : translation.getWordMean()) {
+                            str += s + "\n";
+                        }
+                        Toast.makeText(MainActivity.this, str, Toast.LENGTH_SHORT).show();
+                    }
+
+                    @Override
+                    protected void onFail(String msg) {
+                        Toast.makeText(MainActivity.this, "onFail", Toast.LENGTH_SHORT).show();
+                    }
+                });
     }
 
 }
