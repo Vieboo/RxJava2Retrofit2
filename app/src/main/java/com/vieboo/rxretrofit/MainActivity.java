@@ -20,6 +20,7 @@ import com.vieboo.rxretrofit.net.NetConfigs;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import io.reactivex.Observable;
 import io.reactivex.Observer;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.annotations.NonNull;
@@ -169,23 +170,53 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void getTranslation() {
-        RetrofitFactory.getTSInstance().getTranslation("fy", "en", "zh", "good")
-                .compose(RxScheduler.<BaseModel<Translation>>compose())
-                .subscribe(new BaseObserver<Translation>(MainActivity.this) {
+        Observable.intervalRange(0, 5, 5, 2, TimeUnit.SECONDS)
+                .doOnNext(new Consumer<Long>() {
                     @Override
-                    protected void onSuccess(Translation translation) {
-                        String str = "";
-                        for(String s : translation.getWordMean()) {
-                            str += s + "\n";
-                        }
-                        Toast.makeText(MainActivity.this, str, Toast.LENGTH_SHORT).show();
-                    }
+                    public void accept(Long aLong) throws Exception {
+                        Log.e(TAG, "accept: ----------->1 " + Thread.currentThread().getName());
+                        RetrofitFactory.getTSInstance().getTranslation("fy", "en", "zh", "good")
+                                .compose(RxScheduler.<BaseModel<Translation>>compose())
+                                .subscribe(new BaseObserver<Translation>(MainActivity.this) {
+                                    @Override
+                                    protected void onSuccess(Translation translation) {
+                                        String str = "";
+                                        for(String s : translation.getWordMean()) {
+                                            str += s + "\n";
+                                        }
+//                        Toast.makeText(MainActivity.this, str, Toast.LENGTH_SHORT).show();
+                                        Log.e(TAG, "onSuccess: -->" + str);
+                                    }
 
-                    @Override
-                    protected void onFail(String msg) {
-                        Toast.makeText(MainActivity.this, "onFail", Toast.LENGTH_SHORT).show();
+                                    @Override
+                                    protected void onFail(String msg) {
+                                        Toast.makeText(MainActivity.this, "onFail", Toast.LENGTH_SHORT).show();
+                                    }
+                                });
                     }
-                });
+                })
+        .subscribe(new Observer<Long>() {
+            @Override
+            public void onSubscribe(@NonNull Disposable d) {
+                Log.e(TAG, "onSubscribe: ----------->2");
+            }
+
+            @Override
+            public void onNext(@NonNull Long aLong) {
+                Log.e(TAG, "onNext: ----------->2 " + Thread.currentThread().getName());
+            }
+
+            @Override
+            public void onError(@NonNull Throwable e) {
+                Log.e(TAG, "onError: ----------->2");
+
+            }
+
+            @Override
+            public void onComplete() {
+                Log.e(TAG, "onComplete: ----------->2");
+            }
+        });
     }
 
 }
