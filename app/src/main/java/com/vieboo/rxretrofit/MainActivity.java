@@ -12,6 +12,7 @@ import com.vieboo.rxretrofit.http.RetrofitFactory;
 import com.vieboo.rxretrofit.http.RxScheduler;
 import com.vieboo.rxretrofit.model.BaseModel;
 import com.vieboo.rxretrofit.model.Translation;
+import com.vieboo.rxretrofit.model.Translation2;
 import com.vieboo.rxretrofit.model.Upload2;
 import com.vieboo.rxretrofit.model.Zhuangbi;
 import com.vieboo.rxretrofit.net.Api;
@@ -21,11 +22,13 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import io.reactivex.Observable;
+import io.reactivex.ObservableSource;
 import io.reactivex.Observer;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.annotations.NonNull;
 import io.reactivex.disposables.Disposable;
 import io.reactivex.functions.Consumer;
+import io.reactivex.functions.Function;
 import io.reactivex.schedulers.Schedulers;
 import okhttp3.OkHttpClient;
 import retrofit2.Retrofit;
@@ -41,9 +44,15 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+//        request();
+        request2();
 
-        getTranslation();
 
+//        getTranslation();
+
+
+
+        /**
         OkHttpClient client = new OkHttpClient.Builder()
                 .connectTimeout(20, TimeUnit.SECONDS)
                 .readTimeout(20, TimeUnit.SECONDS)
@@ -122,6 +131,8 @@ public class MainActivity extends AppCompatActivity {
 //                });
 
 
+         **/
+
         Log.e(TAG, "-----------onCreate: ");
 
 
@@ -168,6 +179,72 @@ public class MainActivity extends AppCompatActivity {
         super.onDestroy();
         Log.e(TAG, "-----------onDestroy: " );
     }
+
+
+    private void request() {
+        RetrofitFactory.getTSInstance().getTranslation("fy", "en", "zh", "good")
+                .compose(RxScheduler.<BaseModel<Translation>>compose())
+                .subscribe(new BaseObserver<Translation>(MainActivity.this) {
+                    @Override
+                    protected void onSuccess(Translation translation) {
+                        String str = "";
+                        for(String s : translation.getWordMean()) {
+                            str += s + "\n";
+                        }
+                        Log.e(TAG, "onSuccess: -->" + str);
+                    }
+
+                    @Override
+                    protected void onFail(String msg) {
+
+                    }
+                });
+    }
+
+
+    private void request2() {
+        RetrofitFactory.getTSInstance().regist("fy", "en", "zh", "register")
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .doOnNext(new Consumer<BaseModel<Translation>>() {
+                    @Override
+                    public void accept(BaseModel<Translation> translationBaseModel) throws Exception {
+                        Log.e(TAG, "accept: -1111->" + Thread.currentThread().getName());
+                        String str = "";
+                        for(String s : translationBaseModel.getContent().getWordMean()) {
+                            str += s + "\n";
+                        }
+                        Log.e(TAG, "onSuccess: 第1次网络请求成功-->" + str);
+                    }
+                })
+                .observeOn(Schedulers.io())
+                .flatMap(new Function<BaseModel<Translation>, ObservableSource<BaseModel<Translation2>>>() {
+                    @Override
+                    public ObservableSource<BaseModel<Translation2>> apply(@NonNull BaseModel<Translation> translationBaseModel) throws Exception {
+                        Log.e(TAG, "accept: -2222->" + Thread.currentThread().getName());
+                        return RetrofitFactory.getTSInstance().login("fy", "en", "zh", "login");
+                    }
+                })
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(new BaseObserver<Translation2>(MainActivity.this) {
+                    @Override
+                    protected void onSuccess(Translation2 translation2) {
+                        Log.e(TAG, "accept: -3333->" + Thread.currentThread().getName());
+                        String str = "";
+                        for(String s : translation2.getWordMean()) {
+                            str += s + "\n";
+                        }
+                        Log.e(TAG, "onSuccess: 第2次网络请求成功-->" + str);
+                    }
+
+                    @Override
+                    protected void onFail(String msg) {
+                        Log.e(TAG, "onFail: " + msg);
+                    }
+                });
+    }
+
+
 
     private void getTranslation() {
         Observable.intervalRange(0, 5, 5, 2, TimeUnit.SECONDS)
